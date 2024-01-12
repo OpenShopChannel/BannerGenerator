@@ -16,7 +16,7 @@ type Banner struct {
 	IMET    IMET
 }
 
-func makeBanner(app *App) error {
+func makeBanner(app *App, zipPath string) error {
 	b := Banner{}
 	b.makeIMET(app.Name)
 	arcData, err := b.makeArcFile(app)
@@ -37,12 +37,31 @@ func makeBanner(app *App) error {
 
 	buf.Write(arcData)
 
+	// Encrypt the contents
+	encBanner, encZip, tmdBytes, err := app.encryptContents(buf.Bytes(), zipPath)
+	if err != nil {
+		return err
+	}
+
 	err = os.MkdirAll(fmt.Sprintf(Outpath, app.Shop.TitleID), 0777)
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(fmt.Sprintf(Outpath+"/00000000.app", app.Shop.TitleID), buf.Bytes(), 0666)
+	// Banner
+	err = os.WriteFile(fmt.Sprintf(Outpath+"/00000000", app.Shop.TitleID), encBanner, 0666)
+	if err != nil {
+		return err
+	}
+
+	// TMD
+	err = os.WriteFile(fmt.Sprintf(Outpath+"/tmd", app.Shop.TitleID), tmdBytes, 0666)
+	if err != nil {
+		return err
+	}
+
+	// Zip
+	return os.WriteFile(fmt.Sprintf(Outpath+"/00000003", app.Shop.TitleID), encZip, 0666)
 }
 
 func (a *App) makeBannerBin() ([]byte, error) {

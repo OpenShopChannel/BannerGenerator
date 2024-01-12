@@ -22,6 +22,7 @@ type App struct {
 	ReleaseDate int64  `json:"release_date"`
 	Shop        struct {
 		TitleID string `json:"title_id"`
+		Version int    `json:"title_version"`
 	} `json:"shop"`
 	Description struct {
 		Long  string `json:"long"`

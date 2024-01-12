@@ -21,16 +21,11 @@ var contentAesKey = [16]byte{0x72, 0x95, 0xDB, 0xC0, 0x47, 0x3C, 0x90, 0x0B, 0xB
 
 // encryptContents encrypts both the banner and zip.
 func (a *App) encryptContents(decrypted []byte, zipPath string) ([]byte, []byte, []byte, error) {
-	// Get integer version of Title ID and pass it to the ticket to create the AES key
+	// Get integer version of Title ID
 	titleId, err := strconv.ParseInt(a.Shop.TitleID, 16, 64)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-
-	ticket := wadlib.Ticket{TitleID: uint64(titleId)}
-	ticket.UpdateTitleKey(contentAesKey)
-	titleKey := ticket.GetTitleKey()
-
 	// Create TMD and calculate SHA1 sum
 	tmd, err := a.createTmd(uint64(titleId))
 	if err != nil {
@@ -49,12 +44,12 @@ func (a *App) encryptContents(decrypted []byte, zipPath string) ([]byte, []byte,
 	tmd.Contents[3].Size = uint64(len(zipFile))
 	tmd.Contents[3].Hash = sha1.Sum(zipFile)
 
-	encBanner, err := encryptContent(titleKey, decrypted, 0)
+	encBanner, err := encryptContent(decrypted, 0)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	encZip, err := encryptContent(titleKey, zipFile, 3)
+	encZip, err := encryptContent(zipFile, 3)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -75,7 +70,7 @@ func (a *App) encryptContents(decrypted []byte, zipPath string) ([]byte, []byte,
 }
 
 // encryptContent encrypts a singular content.
-func encryptContent(key [16]byte, decrypted []byte, cid int) ([]byte, error) {
+func encryptContent(decrypted []byte, cid int) ([]byte, error) {
 	// The IV we'll use will be the two bytes sourced from the content's index,
 	// padded with 14 null bytes.
 	var indexBytes [2]byte
@@ -85,7 +80,7 @@ func encryptContent(key [16]byte, decrypted []byte, cid int) ([]byte, error) {
 	iv[0] = indexBytes[0]
 	iv[1] = indexBytes[1]
 
-	block, err := aes.NewCipher(key[:])
+	block, err := aes.NewCipher(contentAesKey[:])
 	if err != nil {
 		return nil, err
 	}
